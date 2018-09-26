@@ -48,6 +48,7 @@ def _main():
     clf.fit(train[:,:len(train[0])-1], train[:,len(train[0])-1])
     print '    Took {0} seconds'.format(str(time.time()-t))
 
+    #TODO - does something like "feature importance" exist for naive bayes?
     # Print out "n most important features"
     # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
     n = 10
