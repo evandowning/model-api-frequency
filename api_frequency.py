@@ -5,11 +5,17 @@ import numpy as np
 import random
 import time
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.datasets import make_classification
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.externals import joblib
+
+# Based on https://stackoverflow.com/questions/11116697/how-to-get-most-informative-features-for-scikit-learn-classifiers#11116960
+def print_top10(clf, class_labels):
+    """Prints features with the highest coefficient values, per class"""
+    top10 = np.argsort(clf.coef_[0])[-10:]
+    for f in top10:
+        print '    ', f
 
 def usage():
     print 'usage: python api_frequency.py data.csv output-model.pkl'
@@ -38,9 +44,9 @@ def _main():
     test = x[thresh:]
     print '    Took {0} seconds'.format(str(time.time()-t))
 
-    #TODO - use multinomial nb - http://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.MultinomialNB.html#sklearn.naive_bayes.MultinomialNB
-    # Create Random Forest
-    clf = RandomForestClassifier(n_estimators=10)
+    # Create Multinomial Naive Bayes class
+    # http://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.MultinomialNB.html#sklearn.naive_bayes.MultinomialNB
+    clf = MultinomialNB()
 
     # Run training
     print 'Running training'
@@ -48,15 +54,9 @@ def _main():
     clf.fit(train[:,:len(train[0])-1], train[:,len(train[0])-1])
     print '    Took {0} seconds'.format(str(time.time()-t))
 
-    #TODO - does something like "feature importance" exist for naive bayes?
-    # Print out "n most important features"
-    # https://stackoverflow.com/questions/6910641/how-do-i-get-indices-of-n-maximum-values-in-a-numpy-array
-    n = 10
-    imp = clf.feature_importances_
-    index = imp.argsort()[-n:][::-1]
-    # Print important API calls
-    for i in index:
-        print 'Call: {0}    Importance: {1}'.format(i,imp[i])
+    print 'Top most important api calls:'
+    print_top10(clf,[0,1])
+    print ''
 
     # Run predictions
     print 'Running predictions'
