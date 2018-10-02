@@ -4,18 +4,12 @@ import pandas as pd
 import numpy as np
 import random
 import time
+from collections import Counter
 
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.externals import joblib
-
-# Based on https://stackoverflow.com/questions/11116697/how-to-get-most-informative-features-for-scikit-learn-classifiers#11116960
-def print_top10(clf, class_labels):
-    """Prints features with the highest coefficient values, per class"""
-    top10 = np.argsort(clf.coef_[0])[-10:]
-    for f in top10:
-        print '    ', f
 
 def usage():
     print 'usage: python api_frequency.py data.csv output-model.pkl'
@@ -53,10 +47,6 @@ def _main():
     t = time.time()
     clf.fit(train[:,:len(train[0])-1], train[:,len(train[0])-1])
     print '    Took {0} seconds'.format(str(time.time()-t))
-
-    print 'Top most important api calls:'
-    print_top10(clf,[0,1])
-    print ''
 
     # Run predictions
     print 'Running predictions'

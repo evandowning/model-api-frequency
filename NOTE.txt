@@ -1,0 +1,41 @@
+List of API calls we try to whitelist to allow the attacker to 
+naively reduce the frequency of (i.e., just remove without care):
+
+Allow: we whitelist these
+    4137: Sleep
+        - We can reduce this because sleeping doesn't necessarily affect the malicious
+          behavior
+    836: CreateMutexA 
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+
+    1604: FindClose 
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+    
+    1591: FileTimeToDosDateTime
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+    2035: GetModuleHandleExA
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+    1592: FileTimeToLocalFileTime
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+
+    1616: FindFirstFileA
+        - We can reduce this because CreateMutexA doesn't necessarily affect the malicious
+          behavior
+Disallow: we chose not to whitelist these
+    4673: WriteFile
+        - We chose not to reduce this because it can affect the malicious behaviors.
+          Maybe, though, we can consolidate WriteFile() calls?
+    1929: GetFileType
+	- We chose not ot reduce this because it can affect the malicious behaviors.
+    3107: ReadFile
+	- We chose not ot reduce this because it can affect the malicious behaviors.
+    2217: GetSystemDirectoryA
+	- We chose not ot reduce this because it can affect the malicious behaviors.
+
+    3164; RegNotifyChangeKeyValue
+	- We chose not to reduce this because it can affect the malicious behaviours.

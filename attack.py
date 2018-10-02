@@ -1,318 +1,44 @@
 import sys
 import os
 import math
+import time
+import pandas as pd
 import numpy as np
 import cPickle as pkl
-from subprocess import call
-import itertools
 from multiprocessing import Pool
+from collections import Counter
 
-from sklearn import tree
-from sklearn.tree import _tree
 from sklearn.externals import joblib
 
-# NOTE: to defeat a random forest, we must defeat a majority
-#       of the decision trees in that forest:
-# http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html#sklearn.ensemble.RandomForestClassifier.predict
-
-#TODO - make sure this works for any amount of successes and failure paths (i.e., how do we change 'x' if we have to go "backwards"?)
-# Finds an attack on multiple trees simultaneously
-# http://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html#
-# https://stackoverflow.com/questions/48880557/print-the-decision-path-of-a-specific-sample-in-a-random-forest-classifier
-def find_attack(trees, comb, dt_index, benign_paths, x, xorig, api_list):
-#   print '-------------------'
-#   print 'Attacking tree: {0}'.format(dt_index)
-
-    # Get tree which belongs to this index
-    index = comb[dt_index]
-    estimator = trees[index]
-
-    # Get benign paths which belong to this tree
-    bpath = benign_paths[dt_index]
-
-    # Get decision path for this sample for this tree
-    node_indicator = estimator.decision_path([x])
-
-    # Get leaves
-    leave_id = estimator.apply([x])
-
-    # Get nodes in decision path for this tree
-    node_index = node_indicator.indices[node_indicator.indptr[0]:
-                            node_indicator.indptr[1]]
-
-    decision_path = list()
-
-    # Construct decision path via directions (to compare to benign paths)
-    features = estimator.tree_.feature
-    value = estimator.tree_.value
-    prev = None
-    for n in node_index:
-        # Figure out which direction this was traversed in
-        if prev != None:
-            # If left node
-            if n == estimator.tree_.children_left[prev]:
-                decision_path.append('left')
-            else:
-                decision_path.append('right')
-
-        prev = n
-
-        # If a leaf node is reached, a decision is made
-        if leave_id[0] == n:
-#           print 'class: ', str(np.argmax(value[n]))
-            break
-
-        # Append node
-        decision_path.append(str(api_list[features[n]]))
-
-#   print decision_path
-
-    xcopy = None
-    # For each benign path, see if there is a way to it from the decision path
-    for bp in bpath:
-#       print bp
-
-        # Make a backup of the current 'x'
-        xcopy = np.copy(x)
-
-        answer = 'YES'
-        bprev = None
-        for d,b in itertools.izip_longest(decision_path,bp):
-            # If these disagree with each other, check direction
-            if d != b:
-                # If it's a left direction, check to see if this isn't a feature in our sample (if it is, we can't use this attack)
-                if b == 'left':
-                    # Determine API index of this call
-                    ni = int(bprev.split(' ')[0]) - 1
-                    if x[ni] == 1:
-                        answer = 'NO'
-                        break
-
-            bprev = b
-#       print answer
-
-        # If we've found an attack, change 'x' and move onto the next tree
-        if answer == 'YES':
-            bprev = None
-            for b in bp:
-                # "Add" API call to 'x'
-                if b == 'right':
-                    # Determine API index of this call
-                    ni = int(bprev.split(' ')[0]) - 1
-#                   if x[ni] != 1:
-#                       print 'changing index: x[{0}]'.format(ni)
-                    x[ni] = 1
-
-                bprev = b
-
-            # If we have no more trees to search through, we're done :)
-            if dt_index+1 == len(comb):
-                return 'success',x
-
-            # Move onto next tree
-            return find_attack(trees, comb, dt_index+1, benign_paths, x, xorig, api_list)
-
-        # If we have to loop to try the next path, reset 'x'
-        x = np.copy(xcopy)
-
-    return 'failure',None
-
-# Produces attack for each sample
-def attack_all(fn, clf, benign_paths, num_trees, half, a, api_list, output_dir):
-    # Read sequence
-    with open(fn, 'rb') as fr:
-        s,l = pkl.load(fr)
-
-    # If sample is benign, ignore it
-    if l == 0:
-        return None
-    # Else, change label to be malicious (instead of malware class)
-    else:
-        l = 1
-
-    x = np.array([0]*a)
-    # Deduplicate sequence integers
-    s = set(s)
-
-    # Remove 0's from feature vector (these are padding integers)
-    s -= {0}
-
-    # Create feature vector for existence
-    # -1 because 0 is used as a padding character for sequences
-    for i in s:
-        x[i-1] = 1
-
-    # Evaluate features
-    pred = clf.predict([x])[0]
-
-    if pred == 0:
-#       print '    Already classified as benign'
-        return None
-
-    # For each combination of trees
-    attack = None
-    for comb in list(itertools.combinations(range(num_trees),half)):
-#       print 'trying to attack combination: {0}'.format(str(comb))
-
-        # Find an attack
-        rv,attack = find_attack(clf.estimators_, comb, 0, benign_paths, np.copy(x), x, api_list)
-#       print 'final: ', rv
-
-        # If attack is found, we're done with this sample
-        if attack is not None:
-            break
-
-    # If attack wasn't found
-    if attack is None:
-        return None
-
-#   print '    Final: ', attack
-#   print '    Added API calls: ', [i for i in range(len(x)) if attack[i] != x[i]]
-
-    # Check the new label
-#   print '    New predict: ', clf.predict([attack])[0]
-
-    # Create output filename
-    base = os.path.basename(fn)
-    outfn = os.path.join(output_dir,base[:-4])
-
-#   print '    Writing to {0}'.format(outfn)
-
-    # Record added API call indices (changed to match the numbers in syscall sequence)
-    with open(outfn, 'w') as fw:
-        fw.write(str([i+1 for i in range(len(x)) if attack[i] != x[i]]))
-
-    # Return statistics about how many api calls were added
-    return sum([i for i in x if i == 1]), sum([i for i in attack if i == 1])
-
-def attack_all_wrapper(args):
-    return attack_all(*args)
-
-# Prints out decision tree logic in if-else statement form
-def recursive_print(left, right, threshold, features, node, value, depth=0):
-    indent = "\t" * depth
-    if(threshold[node] != -2):
-        print indent, "if ( " + str(features[node]) + " <= " + str(threshold[node])  + " class:" + str(np.argmax(value[node])) +  "  ) { " 
-        if left[node] != -1:
-            recursive_print (left, right, threshold, features, left[node], value, depth+1)
-            print indent, '} else { '
-            if right[node] != -1:
-                recursive_print (left, right, threshold, features, right[node], value, depth+1)
-            print indent, ' } '
-    else:
-        print indent,"return "  + str(value[node])
-
-# Print decision tree
-def print_tree(tree_in_clf, api_list, fn, outfn):
-    # Print tree logic to stdout
-    # https://www.kdnuggets.com/2017/05/simplifying-decision-tree-interpretation-decision-rules-python.html
-#   recursive_print(left, right, tree_in_clf.tree_.threshold, tree_in_clf.tree_.feature, node, tree_in_clf.tree_.value)
-
-    print 'Writing tree to {0} and {1}'.format(fn, outfn)
-
-    # https://stats.stackexchange.com/questions/118016/how-can-you-print-the-decision-tree-of-a-randomforestclassifier
-    # Write tree information to dot file
-    with open(fn, 'w') as fw:
-        tree.export_graphviz(tree_in_clf, out_file = fw, class_names = ['benign', 'malicious'], feature_names = api_list)
-
-    # Convert dot file to png file
-    call(['dot', '-Tpng', fn, '-o', outfn, '-Gdpi=300'])
-
-# Pythonic way of traversing tree & keeping track of path
-# Based on https://eddmann.com/posts/depth-first-search-and-breadth-first-search-in-python/
-def get_paths(t,start):
-    # Initialize path
-    queue = [(start, [start])]
-
-    while queue:
-        # Get current node/path
-        (node, path) = queue.pop(0)
-
-        # Get left and right children of node
-        left = t.children_left[node]
-        right = t.children_right[node]
-
-        # If leaf node, yield path
-        if (left == -1) and (right == -1):
-            yield path
-        else:
-            # If a left child exists
-            if left != -1:
-                queue.append((left, path + ['left',left]))
-            # If a right child exists
-            if right != -1:
-                queue.append((right, path + ['right',right]))
-
-# Creates ruleset of single tree
-def parse_tree(tree_,feature_names):
-    threshold = tree_.threshold
-    features = tree_.feature
-
-    #TODO - number of samples and values do not match
-    value = tree_.value
-    samples = tree_.n_node_samples
-#   print value, samples
-
-    # Get all paths in decision tree
-    paths = list(get_paths(tree_,0))
-
-    print '    Number of paths: ', str(len(paths))
-
-    rules = list()
-
-    # Extract rulesets for benign paths
-    for p in paths:
-        # Get last node in path (the class)
-        c = p[-1]
-
-        # If the class is benign
-        if np.argmax(value[c]) == 0:
-            f = list()
-
-            for n in p:
-                if n == 'left' or n == 'right':
-                    f.append(n)
-                    continue
-
-                if threshold[n] != -2:
-                    f.append(str(feature_names[features[n]]))
-
-            rules.append(f)
-
-    return rules
-
-# Returns list of rulesets for benign paths
-def create_rules(clf, api_list):
-    rules = list()
-
-    # Iterate over each tree in random forest
-    for e, tree_in_clf in enumerate(clf.estimators_):
-        print 'Scanning tree {0}'.format(e)
-
-        # Create ruleset for tree
-        rv = parse_tree(tree_in_clf.tree_,api_list)
-        rules.append(rv)
-
-#       # Print tree to file
-#       fn = 'tree_' + str(e) + '.dot' 
-#       outfn = 'tree_' + str(e) + '.png'
-#       print_tree(tree_in_clf, api_list, fn, outfn)
-
-    return rules
+# Based on https://stackoverflow.com/questions/11116697/how-to-get-most-informative-features-for-scikit-learn-classifiers#11116960
+def print_top10(clf, number_benign, number_malicious):
+    """Prints features with the highest coefficient values, per class"""
+
+    print 'Most informative features:'
+    print 'API index, coefficient, # features in samples, avg. # features in samples'
+    # Prints out most informative features for model for the "positive" class (i.e., malicious)
+    features = np.argsort(clf.coef_[0])[::-1]
+    for f in features[:10]:
+        print '\tbenign:   \t{0}\t{1}\t{2}\t{3}'.format(f, clf.coef_[0][f], clf.feature_count_[0][f], clf.feature_count_[0][f]/float(number_benign))
+        print '\tmalicious:\t{0}\t{1}\t{2}\t{3}'.format(f, clf.coef_[0][f], clf.feature_count_[1][f], clf.feature_count_[1][f]/float(number_malicious))
+        print ''
+
+    return [api for api in features if clf.feature_count_[0][api] > 0]
 
 def usage():
-    print 'usage: python attack.py sequences/ api.txt model.pkl output/'
+    print 'usage: python attack.py sequences/ api.txt data.csv model.pkl output/'
     sys.exit(2)
 
 def _main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         usage()
 
     # Get parameter
     sample_dir = sys.argv[1]
     api_file = sys.argv[2]
-    modelfn = sys.argv[3]
-    output_dir = sys.argv[4]
+    infile = sys.argv[3]
+    modelfn = sys.argv[4]
+    output_dir = sys.argv[5]
 
     # If output_dir doesn't exist yet
     if not os.path.exists(output_dir):
@@ -320,38 +46,49 @@ def _main():
 
     # Get number of API calls
     a = 0
-    api_list = list()
     with open(api_file, 'rb') as fr:
         for e,line in enumerate(fr):
             line = line.strip('\n')
-            api_list.append('{0} {1}'.format(e+1,line))
             a += 1
+
+    # Read in data
+    print 'Reading in data'
+    t = time.time()
+    data = pd.read_csv(infile)
+    x = data.values
+    print '    Took {0} seconds'.format(str(time.time()-t))
+
+    # Count number of benign samples
+    y = x[:,len(x[0])-1]
+    c = Counter(y)
+    print c
+    number_benign = c[0]
+    number_malicious = c[1]
 
     # Load model
     print 'Loading model'
     clf = joblib.load(modelfn)
 
-    # Extract benign paths for each tree
-    benign_paths = create_rules(clf, api_list)
+    # Print top most important features for benign samples
+    attack_features = print_top10(clf, number_benign, number_malicious)
 
+    # Read in metadata
+    metadata_fn = os.path.join(sample_dir,'metadata.pkl')
+    with open(metadata_fn,'rb') as fr:
+        # Window Size
+        windowSize = pkl.load(fr)
+        # Number of samples per label
+        labelCount = pkl.load(fr)
+        # Number of samples per data file (so we can determine folds properly)
+        fileMap = pkl.load(fr)
 
-    # Calculate combination of trees which would
-    # cause random forest to misclassify
-    num_trees = len(clf.estimators_)
-    # If evenly divisible
-    if num_trees % 2 == 0:
-        half = num_trees/2 + 1
-    else:
-        half = int(math.ceil(num_trees/2.0))
-
-    print ''
-    print 'Must find attacks for {0}/{1} trees'.format(half,num_trees)
-
-    args = list()
+    sumToBenign = 0
+    totalMalicious = 0
+    reduceCalls = Counter()
 
     # Get malware files to find attacks for
     for root, dirs, files in os.walk(sample_dir):
-        for filename in files:
+        for filename in files[:100]:
             # Ignore metadata
             if filename == 'metadata.pkl':
                 continue
@@ -363,30 +100,114 @@ def _main():
             if os.stat(fn).st_size == 0:
                 continue
 
-            args.append((fn,clf,benign_paths,num_trees,half,a,api_list,output_dir))
+            print '================================='
+            print '================================='
 
-    statSum = 0
-    statTotal = 0
+            # Get chunk number
+            s = os.path.basename(fn)
+            count = fileMap[s[:-4]]
 
-    pool = Pool(20)
-    results = pool.imap_unordered(attack_all_wrapper, args)
-    for e,r in enumerate(results):
-        sys.stdout.write('Finding attacks: {0}/{1}\r'.format(e+1,len(args)))
-        sys.stdout.flush()
+            seq = np.array([])
+            
+            # Read sequence
+            with open(fn, 'rb') as fr:
+                for i in range(count):
+                    n,l = pkl.load(fr)
+                    if len(seq) == 0:
+                        seq = n
+                    else:
+                        seq = np.append(seq,n)
 
-        if r is not None:
-            before,after = r
-            statSum += ((float(after) / before) - 1)
-            statTotal += 1
+            x = np.array([0]*a)
 
-    pool.close()
-    pool.join()
+            # Use python function to give you counts of elements in numpy array
+            cp = Counter(seq)
 
-    sys.stdout.write('\n')
-    sys.stdout.flush()
+            # Create feature vector for frequency features
+            sa = set(seq)
 
-    # Print statistics
-    print 'Avg. added % of api calls: {0}'.format(statSum * 100.0 / float(statTotal))
+            # Remove 0's from feature vector (these are padding integers)
+            sa -= {0}
+            # -1 because 0 is used as a padding character for sequences
+            for i in sa:
+                x[i-1] = cp[i]
+
+            # For classes 'benign' and 'malicious'
+            if l > 0:
+                l = 1
+
+            # If benign, ignore
+            if l == 0:
+                continue
+
+            totalMalicious += 1
+
+            #TODO - print out original prediction for this sample
+
+            # Run predictions
+            print 'Running predictions'
+            predicted = clf.predict([x])[0]
+            #accuracy = accuracy_score([x], predicted)
+
+            print ''
+            print '\tPredictions: {0}'.format(predicted)
+            #print 'Validation Accuracy: {0:.3}'.format(accuracy)
+
+            prob = clf.predict_proba([x])[0]
+            print '\tProbability estimate: {0}'.format(prob)
+
+            #TODO - attack the counts of this malware's features
+
+            xprime = np.copy(x)
+
+            #TODO
+            special_reduce = [4137, 4673, 1928, 836, 3107, 1603, 1591, 2217, 2035, 1592, 1616, 3164]
+
+            # http://scikit-learn.org/stable/modules/naive_bayes.html#multinomial-naive-bayes
+            print 'size of attack_features: {0}'.format(len(attack_features))
+#           for f in attack_features[:35]:
+            for f in attack_features:
+
+                c = clf.feature_count_[0][f]/float(number_benign)
+                # Change every feature
+#               if x[f] != c:
+#                   x[f] = math.ceil(c)
+
+                # Only increase features (except for Sleep which we can decrease)
+                if (xprime[f] < c) or (f in special_reduce):
+                    xprime[f] = math.ceil(c)
+                else:
+                    print f,xprime[f],c
+
+            # call predict on new data and see if it now classifies as benign
+
+            # Run predictions
+            print 'Running predictions'
+            predicted = clf.predict([xprime])[0]
+
+            print ''
+            print '\tPredictions: {0}'.format(predicted)
+
+            prob = clf.predict_proba([xprime])[0]
+            print '\tProbability estimate: {0}'.format(prob)
+
+            # If still malicious, try to find calls in common to reduce
+            if predicted == 1:
+                for f in attack_features:
+                    c = clf.feature_count_[0][f]/float(number_benign)
+                    # Only increase features (except for Sleep, which we can decrease)
+                    if (x[f] < c) or (f in special_reduce):
+                        continue
+                    else:
+                        reduceCalls[f] += 1
+
+            if predicted == 0:
+                sumToBenign += 1
+
+    print sumToBenign,totalMalicious
+    print '% Changed from malicious to benign: ', float(sumToBenign)/totalMalicious
+
+    print reduceCalls
 
 if __name__ == '__main__':
     _main()

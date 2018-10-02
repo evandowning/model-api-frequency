@@ -71,7 +71,7 @@ def _main():
     # Read in metadata
     metadata_fn = os.path.join(sample_dir,'metadata.pkl')
     with open(metadata_fn,'rb') as fr:
-    # Window Size
+        # Window Size
         windowSize = pkl.load(fr)
         # Number of samples per label
         labelCount = pkl.load(fr)
