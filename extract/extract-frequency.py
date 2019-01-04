@@ -44,7 +44,7 @@ def extract_wrapper(args):
 
 # Gets raw files and their base directory names
 # NOTE: I assume there's been only one run of each sample
-def getFiles(folder):
+def getFiles(folder,sampleMap):
     # Get base directories
     dirs = os.listdir(folder)
 
@@ -53,6 +53,10 @@ def getFiles(folder):
 
     # Get raw files
     for d in dirs:
+        # Ignore samples we don't care about
+        if d not in sampleMap.keys():
+            continue
+
         for directory,dirname,files in os.walk(os.path.join(folder,d)):
             # Ignore directories
             base = os.path.basename(directory)
@@ -107,7 +111,7 @@ def _main():
             sampleMap[h] = labelMap[c]
 
     # Get raw files and their corresponding directory
-    rv = getFiles(rawDir)
+    rv = getFiles(rawDir,sampleMap)
 
     # Construct args
     args = [(h,d,raw) for h,d,raw in rv]
