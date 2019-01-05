@@ -147,7 +147,7 @@ def _main():
             # Append data to CSV file
             fa.write('{0},'.format(h))
             fa.write('{0}'.format(','.join(map(str,x))))
-            fa.write(',{0}\n'.format(l))
+            fa.write(',{0}\n'.format(sampleMap[h]))
 
             sys.stdout.write('Extracting data: {0}/{1}\r'.format(e+1,len(args)))
             sys.stdout.flush()
