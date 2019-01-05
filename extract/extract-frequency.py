@@ -145,12 +145,8 @@ def _main():
                 x[int(i)] = cp[i]
 
             # Append data to CSV file
+            fa.write('{0},'.format(h))
             fa.write('{0}'.format(','.join(map(str,x))))
-
-            if sampleMap[h] > 0:
-                l = 1
-            else:
-                l = 0
             fa.write(',{0}\n'.format(l))
 
             sys.stdout.write('Extracting data: {0}/{1}\r'.format(e+1,len(args)))
