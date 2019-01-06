@@ -45,13 +45,13 @@ def _main():
     # Run training
     print 'Running training'
     t = time.time()
-    clf.fit(train[:,1:len(train[0])-1], train[:,len(train[0])-1])
+    clf.fit(train[:,1:len(train[0])-1].astype(np.float64), train[:,len(train[0])-1].astype(np.float64))
     print '    Took {0} seconds'.format(str(time.time()-t))
 
     # Run predictions
     print 'Running predictions'
     predicted = clf.predict(test[:,1:len(test[0])-1])
-    accuracy = accuracy_score(test[:,len(test[0])-1], predicted)
+    accuracy = accuracy_score(test[:,len(test[0])-1].astype(np.float64), predicted)
 
     print ''
     print 'Validation Accuracy: {0:.3}'.format(accuracy)

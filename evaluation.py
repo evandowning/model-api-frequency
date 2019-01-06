@@ -40,7 +40,7 @@ def _main():
     # Run predictions
     print 'Running predictions'
     predicted = clf.predict(x[:,1:len(x[0])-1])
-    accuracy = accuracy_score(x[:,len(x[0])-1].astype(int), predicted)
+    accuracy = accuracy_score(x[:,len(x[0])-1].astype(np.float64), predicted)
 
     print ''
     print 'Accuracy: {0:.3}'.format(accuracy)
