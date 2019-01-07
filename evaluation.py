@@ -30,7 +30,7 @@ def _main():
     # Read in data
     print 'Reading in data'
     t = time.time()
-    data = pd.read_csv(infile)
+    data = pd.read_csv(infile,header=None)
     x = data.values
     print '    Took {0} seconds'.format(str(time.time()-t))
 
