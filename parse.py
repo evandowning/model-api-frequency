@@ -37,10 +37,6 @@ def parse(fn, fileMap, a):
     for i in sa:
         x[i-1] = cp[i]
 
-    # For classes 'benign' and 'malicious'
-    if l > 0:
-        l = 1
-
     return x,l
 
 def parse_wrapper(args):
