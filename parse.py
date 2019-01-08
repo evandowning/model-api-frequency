@@ -10,10 +10,11 @@ from collections import Counter
 def parse(fn, fileMap, a):
     # Get chunk number
     s = os.path.basename(fn)
-    count = fileMap[s[:-4]]
+    h = s[:-4]
+    count = fileMap[h]
 
     seq = np.array([])
-    
+
     # Read sequence
     with open(fn, 'rb') as fr:
         for i in range(count):
@@ -37,7 +38,7 @@ def parse(fn, fileMap, a):
     for i in sa:
         x[i-1] = cp[i]
 
-    return x,l
+    return h,x,l
 
 def parse_wrapper(args):
     return parse(*args)
@@ -98,10 +99,10 @@ def _main():
     # Consolidate all features to single CSV file
     with open(outfile, 'a') as fa:
         for e,r in enumerate(results):
-            x,l = r
+            h,x,l = r
 
             # Append data to CSV file
-            fa.write('{0}'.format(','.join(map(str,x))))
+            fa.write('{0},{1}'.format(h,','.join(map(str,x))))
             fa.write(',{0}\n'.format(l))
 
             sys.stdout.write('Extracting sample: {0}/{1}\r'.format(e+1,len(fileList)))
