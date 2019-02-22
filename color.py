@@ -25,7 +25,7 @@ def extract(data,width):
     # Pad array if it's not divisible by width
     r = len(seq) % (width*3)
     if r != 0:
-        seq.extend([(0,0,0)]*(width*3-r))
+        seq.extend([api_adler32('0')]*(width*3-r))
 
     # Reshape numpy array
     rv = np.reshape(np.array(seq), (-1,width*3))
