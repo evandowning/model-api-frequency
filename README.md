@@ -16,3 +16,8 @@ $ python api_frequency.py data.csv model.pkl
 # Attack model
 $ python attack.py /data/arsa/api-sequences-all-classification-32-filtered/ api.txt data.csv model.pkl /data/arsa/api-frequency-attacks/
 ```
+
+## Create images of sequences
+```
+$ python color.py
+```
