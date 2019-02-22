@@ -3,18 +3,10 @@ import sys
 import os
 import numpy as np
 import png
-from struct import unpack
+from struct import unpack,pack
 from multiprocessing import Pool
-import time
 
-from hashlib import md5
 from zlib import adler32
-
-# Converts integers representing api calls to something in between [0,255]
-# Locality insensitive (good contrast)
-# 3 because 3 channels
-def api_md5(api):
-    return unpack('BBB', md5(api).digest()[:3])
 
 # Converts integers representing api calls to something in between [0,255]
 # Locality sensitive (things near each other will be similar colors)
@@ -26,20 +18,18 @@ def api_adler32(api):
 def extract(data,width):
     fn = data[0]
     label = data[-1]
-    seq = np.array([])
 
     # Read in sample's sequence
-    for d in data[1:-1]:
-        # Replace API count integers with pixel values
-        seq = np.append(seq,[api_md5(d)])
+    seq = [api_adler32(d) for d in data[1:-1]]
 
-    # Pad array if it's not divisible by width (3 channels for RGB)
+    # Pad array if it's not divisible by width
     r = len(seq) % (width*3)
     if r != 0:
-        seq = np.append(seq,[0]*(width*3-r))
+        seq.extend([(0,0,0)]*(width*3-r))
 
-    # Reshape numpy array (3 channels)
+    # Reshape numpy array
     rv = np.reshape(np.array(seq), (-1,width*3))
+    rv = rv.astype(np.int8)
 
     return fn,rv,label
 
@@ -63,7 +53,7 @@ def _main():
     # Width of image
     width = 496
 
-    # RBG color scheme (3 channels), 8-bits per channel
+    # RGB (3 channel)
     fmt_str = 'RGB;8'
 
     # If output folder doesn't exist, create it
@@ -82,6 +72,7 @@ def _main():
             # Only do first 10k samples
             if e == 10000:
                 break
+
 
     #TODO - make these parameters
     # Create argument pools
