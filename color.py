@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Produces images of api sequences
 import sys
 import os
@@ -37,7 +39,7 @@ def extract_wrapper(args):
     return extract(*args)
 
 def usage():
-    print 'usage: python color.py data.csv images/ image.labels errors.txt'
+    print('usage: python color.py data.csv images/ image.labels errors.txt')
     sys.exit(2)
 
 def _main():
@@ -63,7 +65,7 @@ def _main():
     data = list()
 
     # Read in data
-    print 'Reading in data'
+    print('Reading in data')
     with open(feature_csv,'r') as fr:
         for e,line in enumerate(fr):
             line = line.strip('\n')

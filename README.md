@@ -4,20 +4,27 @@ Creates ML models of frequency of API calls
 The API integers printed out by attack.py are the zero-indexed
 line numbers in api.txt
 
+## Requirements
+  * Debian 9 64-bit
+
+## Install dependencies
+```
+$ ./setup.sh
+```
+
 ## Usage
 ```
 # Parse data into CSV file
-$ time python parse.py /data/arsa/api-sequences-all-classification-32-filtered/ api.txt data.csv
+$ python3 parse.py api-sequence-features/ api.txt data.csv
 
 # Model data & save model to file
-$ python api_frequency.py data.csv model.pkl
+$ python3 api_existence.py data.csv model.pkl
 
-#TODO
-# Attack model
-$ python attack.py /data/arsa/api-sequences-all-classification-32-filtered/ api.txt data.csv model.pkl /data/arsa/api-frequency-attacks/
+# Evaluate model
+$ python3 evaluation.py data.csv labels.txt model.pkl predictions.csv
 ```
 
-## Create images of sequences
+## Create images of frequency data
 ```
-$ python color.py
+$ python3 color.py
 ```

@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
+
 # Puts data into a CSV file so it can be read in faster
 import sys
 import os
-import cPickle as pkl
+import pickle as pkl
 from multiprocessing import Pool
 import numpy as np
 from collections import Counter
@@ -44,7 +46,7 @@ def parse_wrapper(args):
     return parse(*args)
 
 def usage():
-    print 'usage: python parser.py sequences/ api.txt out.csv'
+    print('usage: python parser.py sequences/ api.txt out.csv')
     sys.exit(2)
 
 def _main():

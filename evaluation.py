@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import os
 import pandas as pd
@@ -8,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.externals import joblib
 
 def usage():
-    print 'usage: python evaluation.py data.csv labels.txt output-model.pkl predictions.csv'
+    print('usage: python evaluation.py data.csv labels.txt output-model.pkl predictions.csv')
     sys.exit(2)
 
 def _main():
@@ -28,29 +30,29 @@ def _main():
             labelMap[line] = e
 
     # Read in data
-    print 'Reading in data'
+    print('Reading in data')
     t = time.time()
     data = pd.read_csv(infile,header=None)
     x = data.values
-    print '    Took {0} seconds'.format(str(time.time()-t))
+    print('    Took {0} seconds'.format(str(time.time()-t)))
 
     # Load model
     clf = joblib.load(outfile)
 
     # Run predictions
-    print 'Running predictions'
+    print('Running predictions')
     predicted = clf.predict(x[:,1:len(x[0])-1])
     accuracy = accuracy_score(x[:,len(x[0])-1].astype(np.float64), predicted)
 
-    print ''
-    print 'Accuracy: {0:.3}'.format(accuracy)
+    print('')
+    print('Accuracy: {0:.3}'.format(accuracy))
 
     # Print predictions
     with open(prediction_fn,'w') as fw:
         fw.write('Hash,Label,Prediction\n')
 
         for e,p in enumerate(predicted):
-            fw.write('{0},{1},{2}\n'.format(x[e][0], labelMap.keys()[labelMap.values().index(x[e][-1])], labelMap.keys()[labelMap.values().index(p)]))
+            fw.write('{0},{1},{2}\n'.format(x[e][0], list(labelMap.keys())[list(labelMap.values()).index(x[e][-1])], list(labelMap.keys())[list(labelMap.values()).index(p)]))
 
 if __name__ == '__main__':
     _main()
