@@ -7,6 +7,11 @@ line numbers in api.txt
 ## Requirements
   * Debian 9 64-bit
 
+## Clone repo
+```
+$ git clone --recurse-submodules git@github.com:evandowning/model-api-frequency.git
+```
+
 ## Install dependencies
 ```
 $ ./setup.sh
@@ -14,11 +19,13 @@ $ ./setup.sh
 
 ## Usage
 ```
+# Extract sequences from nvmtrace dumps (https://github.com/evandowning/nvmtrace/tree/kvm)
 # Parse data into CSV file
-$ python3 parse.py api-sequence-features/ api.txt data.csv
+$ cd cuckoo-headless/extract_raw
+$ python2.7 extract-frequency.py
 
 # Model data & save model to file
-$ python3 api_existence.py data.csv model.pkl
+$ python3 api_frequency.py data.csv model.pkl
 
 # Evaluate model
 $ python3 evaluation.py data.csv labels.txt model.pkl predictions.csv

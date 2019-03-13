@@ -14,14 +14,16 @@ set -e
 # Update
 apt update
 
-# Install python3.5
-apt install -y python3.5
+# Requirements for parsing raw files
+apt install -y python2.7
+apt install -y python-bson
 
-# Install bson
-apt install -y python3-bson
+# Requirements for modeling
+apt install -y python3.5
 
 # Install pip
 apt install -y python3-pip
+pip3 install --upgrade pip
 
 # Install python libraries
 pip3 install -r requirements.txt
