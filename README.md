@@ -14,6 +14,7 @@ $ git clone --recurse-submodules git@github.com:evandowning/model-api-frequency.
 
 ## Install dependencies
 ```
+$ ./cuckoo-headless/setup.sh
 $ ./setup.sh
 ```
 
