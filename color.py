@@ -39,7 +39,7 @@ def extract_wrapper(args):
     return extract(*args)
 
 def usage():
-    print('usage: python color.py data.csv images/ image.labels errors.txt')
+    sys.stderr.write('usage: python color.py data.csv images/ image.labels errors.txt\n')
     sys.exit(2)
 
 def _main():
@@ -65,7 +65,7 @@ def _main():
     data = list()
 
     # Read in data
-    print('Reading in data')
+    sys.stdout.write('Reading in data\n')
     with open(feature_csv,'r') as fr:
         for e,line in enumerate(fr):
             line = line.strip('\n')

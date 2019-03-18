@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.externals import joblib
 
 def usage():
-    print('usage: python evaluation.py data.csv labels.txt output-model.pkl predictions.csv')
+    sys.stderr.write('usage: python evaluation.py data.csv labels.txt output-model.pkl predictions.csv\n')
     sys.exit(2)
 
 def _main():
@@ -30,22 +30,22 @@ def _main():
             labelMap[line] = e
 
     # Read in data
-    print('Reading in data')
+    sys.stdout.write('Reading in data\n')
     t = time.time()
     data = pd.read_csv(infile,header=None)
     x = data.values
-    print('    Took {0} seconds'.format(str(time.time()-t)))
+    sys.stdout.write('    Took {0} seconds\n'.format(str(time.time()-t)))
 
     # Load model
     clf = joblib.load(outfile)
 
     # Run predictions
-    print('Running predictions')
+    sys.stdout.write('Running predictions\n')
     predicted = clf.predict(x[:,1:len(x[0])-1])
     accuracy = accuracy_score(x[:,len(x[0])-1].astype(np.float64), predicted)
 
-    print('')
-    print('Accuracy: {0:.3}'.format(accuracy))
+    sys.stdout.write('\n')
+    sys.stdout.write('Accuracy: {0:.3}\n'.format(accuracy))
 
     # Print predictions
     with open(prediction_fn,'w') as fw:
