@@ -38,10 +38,8 @@ def _main():
     group.add_argument('--k', help='value of k', required=False, default=500)
     group.add_argument('--knn_model', help='output model filepath', required=False)
 
-    group = parser.add_argument_group('svm', 'SVM')
-    group.add_argument('--gamma', help='value of gamma', required=False, default=2)
-    group.add_argument('--c', help='value of c', required=False, default=1)
-    group.add_argument('--svm_model', help='output model filepath', required=False)
+    group = parser.add_argument_group('sgd', 'Stochastic Gradient Descent')
+    group.add_argument('--sgd_model', help='output model filepath', required=False)
 
     group = parser.add_argument_group('mlp', 'MLP')
     group.add_argument('--hidden_layer_sizes', help='each integer is separated by underscore character. the ith element represents the number of neurons in the ith hidden layer. e.g., 10_10 is 2 layers, 10 nodes each', required=False, default='10_10')
@@ -61,15 +59,13 @@ def _main():
     k = int(args.k)
     outK = args.knn_model
 
-    gamma = int(args.gamma)
-    c = int(args.c)
-    outSVM = args.svm_model
+    outSGD = args.sgd_model
 
     layers = args.hidden_layer_sizes
     outMLP = args.mlp_model
 
     # See if there are an odd number of models chosen
-    count = list([outRF,outNB,outK,outSVM,outMLP]).count(None)
+    count = list([outRF,outNB,outK,outSGD,outMLP]).count(None)
     if count % 2 != 0:
         sys.stderr.write('Error. Did not choose an odd number of models.\n')
         sys.exit(1)
@@ -102,9 +98,9 @@ def _main():
     if outK is not None:
         m = KNeighborsClassifier(n_neighbors=k)
         model.append(('K-Nearest Neighbors',m,outK))
-    if outSVM is not None:
+    if outSGD is not None:
         m = SGDClassifier()
-        model.append(('Stochastic Gradient Descent',m,outSVM))
+        model.append(('Stochastic Gradient Descent',m,outSGD))
     if outMLP is not None:
         l = [int(e) for e in layers.split('_')]
         m = MLPClassifier(hidden_layer_sizes=l, activation='logistic', solver='adam', max_iter=1000)
