@@ -5,7 +5,7 @@ The API integers printed out by attack.py are the zero-indexed
 line numbers in api.txt
 
 ## Requirements
-  * Debian 9 64-bit
+  * Debian 10 64-bit
 
 ## Clone repo
 ```
