@@ -7,7 +7,8 @@ import numpy as np
 import time
 
 from sklearn.metrics import accuracy_score
-from sklearn.externals import joblib
+
+import joblib
 
 def usage():
     sys.stderr.write('usage: python evaluation.py data.csv labels.txt output-model.pkl predictions.csv\n')
